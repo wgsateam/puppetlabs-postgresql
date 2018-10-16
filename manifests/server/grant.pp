@@ -286,44 +286,43 @@ define postgresql::server::grant (
 
       $schema = $object_name
 
-      # Again there seems to be no easy way in plain SQL to check if ALL
-      # PRIVILEGES are granted on a table.
-      # There are currently 7 possible priviliges:
-      # ('SELECT','UPDATE','INSERT','DELETE','TRIGGER','REFERENCES','TRUNCATE')
-      # This list is consistant from Postgresql 8.0
-      #
-      # There are 4 cases to cover, each with it's own distinct unless clause:
-      #    grant ALL
-      #    grant SELECT (or INSERT or DELETE ...)
-      #    revoke ALL
-      #    revoke SELECT (or INSERT or DELETE ...)
+      ## information_schema - because we need views too
+      ## EXCEPT DISTINCT - if any table have no privileges - grant must be relaunched , 
+      ## in commit 8423d78  ""NOT EXISTS SELECT FROM information schema.tables""  - if any tables has privilege - grant relaunch will not occure
 
       if $ensure == 'present' {
         if $_privilege == 'ALL' or $_privilege == 'ALL PRIVILEGES' {
           # GRANT ALL
-          $custom_unless = "SELECT 1 WHERE NOT EXISTS
-             ( SELECT 1 FROM pg_catalog.pg_tables AS t,
+          $custom_unless = "SELECT 1 WHERE NOT EXISTS (
+            SELECT t.table_name FROM information_schema.tables AS t           
+               WHERE t.table_schema = '${schema}'
+               EXCEPT 
+            SELECT DISTINCT t1.table_name FROM 
+           (SELECT DISTINCT r.table_name,  p.privilege_type FROM information_schema.role_table_grants AS r,
                (VALUES ('SELECT'), ('UPDATE'), ('INSERT'), ('DELETE'), ('TRIGGER'), ('REFERENCES'), ('TRUNCATE')) AS p(privilege_type)
-               WHERE t.schemaname = '${schema}'
-                 AND NOT EXISTS (
-                   SELECT 1 FROM information_schema.role_table_grants AS g
-                   WHERE g.grantee = '${role}'
-                     AND g.table_schema = '${schema}'
-                     AND g.privilege_type = p.privilege_type
-                   )
-             )"
-
+               WHERE r.grantee = '${role}'
+               AND r.table_schema = '${schema}'  ) AS t1
+            LEFT JOIN (
+               SELECT DISTINCT r.table_name,  p.privilege_type FROM information_schema.role_table_grants AS r,
+                 (VALUES ('SELECT'), ('UPDATE'), ('INSERT'), ('DELETE'), ('TRIGGER'), ('REFERENCES'), ('TRUNCATE')) AS p(privilege_type)
+                 WHERE r.grantee = '${role}'
+                 AND r.table_schema = '${schema}'  
+                 EXCEPT                
+               SELECT r.table_name,  r.privilege_type FROM information_schema.role_table_grants AS r
+                 WHERE r.grantee = '${role}'
+                 AND r.table_schema = '${schema}') AS t2
+                 ON t1.table_name = t2.table_name
+                 WHERE t2.table_name is  null )"
         } else {
           # GRANT $_privilege
           $custom_unless = "SELECT 1 WHERE NOT EXISTS
-             ( SELECT 1 FROM pg_catalog.pg_tables AS t
-               WHERE t.schemaname = '${schema}'
-                 AND NOT EXISTS (
-                   SELECT 1 FROM information_schema.role_table_grants AS g
-                   WHERE g.grantee = '${role}'
-                     AND g.table_schema = '${schema}'
-                     AND g.privilege_type = '${_privilege}'
-                   )
+             ( SELECT t.table_name FROM information_schema.tables AS t           
+               WHERE t.table_schema = '${schema}'
+                 EXCEPT DISTINCT
+               SELECT r.table_name FROM information_schema.role_table_grants AS r
+               WHERE r.grantee = '${role}'
+               AND r.table_schema = '${schema}'
+               AND r.privilege_type = '${_privilege}' 
              )"
         }
       } else {
