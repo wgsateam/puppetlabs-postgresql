@@ -54,6 +54,7 @@ class postgresql::server (
   $manage_pg_hba_conf         = $postgresql::params::manage_pg_hba_conf,
   $manage_pg_ident_conf       = $postgresql::params::manage_pg_ident_conf,
   $manage_recovery_conf       = $postgresql::params::manage_recovery_conf,
+  $manage_pg_conf             = $postgresql::params::manage_pg_conf,
   $module_workdir             = $postgresql::params::module_workdir,
 
   Hash[String, Hash] $roles         = {},
