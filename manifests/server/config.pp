@@ -17,6 +17,7 @@ class postgresql::server::config {
   $manage_pg_hba_conf         = $postgresql::server::manage_pg_hba_conf
   $manage_pg_ident_conf       = $postgresql::server::manage_pg_ident_conf
   $manage_recovery_conf       = $postgresql::server::manage_recovery_conf
+  $manage_pg_conf             = $postgresql::server::manage_pg_conf
   $datadir                    = $postgresql::server::datadir
   $logdir                     = $postgresql::server::logdir
   $service_name               = $postgresql::server::service_name
@@ -100,33 +101,33 @@ class postgresql::server::config {
     create_resources('postgresql::server::pg_hba_rule', $ipv6acl_resources)
   }
 
-  if $listen_addresses {
-    postgresql::server::config_entry { 'listen_addresses':
-      value => $listen_addresses,
+  if $manage_pg_conf {
+    if $listen_addresses {
+      postgresql::server::config_entry { 'listen_addresses':
+        value => $listen_addresses,
+      }
     }
-  }
-
-  postgresql::server::config_entry { 'port':
-    value => $port,
-  }
-  postgresql::server::config_entry { 'data_directory':
-    value => $datadir,
-  }
-  if $timezone {
-    postgresql::server::config_entry { 'timezone':
-      value => $timezone,
+    postgresql::server::config_entry { 'port':
+      value => $port,
     }
-  }
-  if $logdir {
-    postgresql::server::config_entry { 'log_directory':
-      value => $logdir,
+    postgresql::server::config_entry { 'data_directory':
+      value => $datadir,
     }
-
-  }
-  # Allow timestamps in log by default
-  if $log_line_prefix {
-    postgresql::server::config_entry {'log_line_prefix':
-      value => $log_line_prefix,
+    if $timezone {
+      postgresql::server::config_entry { 'timezone':
+        value => $timezone,
+      }
+    }
+    if $logdir {
+      postgresql::server::config_entry { 'log_directory':
+        value => $logdir,
+      }
+    }
+    # Allow timestamps in log by default
+    if $log_line_prefix {
+      postgresql::server::config_entry {'log_line_prefix':
+        value => $log_line_prefix,
+      }
     }
   }
 
