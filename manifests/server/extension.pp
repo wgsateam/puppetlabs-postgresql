@@ -5,6 +5,7 @@ define postgresql::server::extension (
   Optional[String[1]] $schema  = undef,
   Optional[String[1]] $version = undef,
   String[1] $ensure            = 'present',
+  $port                        = $postgresql::server::port,
   $package_name                = undef,
   $package_ensure              = undef,
   $connect_settings            = $postgresql::server::default_connect_settings,
@@ -46,7 +47,7 @@ define postgresql::server::extension (
     psql_group       => $group,
     psql_path        => $psql_path,
     connect_settings => $connect_settings,
-
+    port             => $port,
     db               => $database,
     command          => $command,
     unless           => "SELECT 1 WHERE ${unless_mod}EXISTS (SELECT 1 FROM pg_extension WHERE extname = '${extension}')",
@@ -72,6 +73,7 @@ define postgresql::server::extension (
       psql_group       => $group,
       psql_path        => $psql_path,
       connect_settings => $connect_settings,
+      port             => $port,
       db               => $database,
       require          => Postgresql_psql["${database}: ${command}"],
     }
@@ -106,6 +108,7 @@ define postgresql::server::extension (
       psql_group       => $group,
       psql_path        => $psql_path,
       connect_settings => $connect_settings,
+      port             => $port,
       command          => $alter_extension_sql,
       unless           => $update_unless,
     }
