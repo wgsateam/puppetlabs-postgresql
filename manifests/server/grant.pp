@@ -169,9 +169,9 @@ define postgresql::server::grant (
       # execute the GRANT statement.
       if $ensure == 'present' {
         $custom_unless = "SELECT 1 WHERE NOT EXISTS (
-          SELECT sequence_name
-          FROM information_schema.sequences
-          WHERE sequence_schema='${schema}'
+          SELECT sequencename
+          FROM pg_catalog.pg_sequences
+          WHERE schemaname='${schema}'
             EXCEPT DISTINCT
           SELECT object_name as sequence_name
           FROM (
