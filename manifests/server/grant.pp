@@ -25,6 +25,7 @@ define postgresql::server::grant (
   String $psql_db                  = $postgresql::server::default_database,
   String $psql_user                = $postgresql::server::user,
   Integer $port                    = $postgresql::server::port,
+  String $version                  = $postgresql::globals::version,
   Boolean $onlyif_exists           = false,
   Hash $connect_settings           = $postgresql::server::default_connect_settings,
   Enum['present',
@@ -168,10 +169,13 @@ define postgresql::server::grant (
       # the role does not have the specified privilege, making it necessary to
       # execute the GRANT statement.
       if $ensure == 'present' {
+        if versioncmp($version, '10') >= 0 {
+          $seq_select = "SELECT sequencename FROM pg_catalog.pg_sequences WHERE schemaname='${schema}' "
+        } else {
+          $seq_select = "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema='${schema}'"
+        }
         $custom_unless = "SELECT 1 WHERE NOT EXISTS (
-          SELECT sequencename
-          FROM pg_catalog.pg_sequences
-          WHERE schemaname='${schema}'
+          ${seq_select}
             EXCEPT DISTINCT
           SELECT object_name as sequence_name
           FROM (
