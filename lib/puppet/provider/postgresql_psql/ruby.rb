@@ -71,7 +71,10 @@ Puppet::Type.type(:postgresql_psql).provide(:ruby) do
                                                         combine: true,
                                                         override_locale: true,
                                                         custom_environment: environment)
-      [output, $CHILD_STATUS.dup]
+      # Process::Status#dup returns an uninitialized status on Ruby 3 (to_i 0,
+      # success? true), which hid every psql failure, so return the exit
+      # status Puppet recorded.
+      [output, output.exitstatus]
     end
   end
 end

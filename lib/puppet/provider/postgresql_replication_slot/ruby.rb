@@ -25,13 +25,13 @@ Puppet::Type.type(:postgresql_replication_slot).provide(:ruby) do
 
   def create
     output = self.class.run_sql_command("SELECT * FROM pg_create_physical_replication_slot('#{resource[:name]}');")
-    raise Puppet::Error, "Failed to create replication slot #{resource[:name]}:\n#{output[0]}" unless output[1].success?
+    raise Puppet::Error, "Failed to create replication slot #{resource[:name]}:\n#{output[0]}" unless output[1].zero?
     @property_hash[:ensure] = :present
   end
 
   def destroy
     output = self.class.run_sql_command("SELECT pg_drop_replication_slot('#{resource[:name]}');")
-    raise Puppet::Error, "Failed to destroy replication slot #{resource[:name]}:\n#{output[0]}" unless output[1].success?
+    raise Puppet::Error, "Failed to destroy replication slot #{resource[:name]}:\n#{output[0]}" unless output[1].zero?
     @property_hash[:ensure] = :absent
   end
 
@@ -53,7 +53,10 @@ Puppet::Type.type(:postgresql_replication_slot).provide(:ruby) do
                                                         combine: true,
                                                         override_locale: true,
                                                         custom_environment: {})
-      [output, $CHILD_STATUS.dup]
+      # Process::Status#dup returns an uninitialized status on Ruby 3
+      # (success? true), which hid every psql failure, so return the exit
+      # status Puppet recorded.
+      [output, output.exitstatus]
     end
   end
 end
